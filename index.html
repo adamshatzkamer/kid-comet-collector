@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Comet Collector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700;800&family=Bungee&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="hud" aria-live="polite">
+        <h1 id="game-title">Comet Collector</h1>
+        <div class="stats">
+          <p><span id="label-score">Score</span>: <span id="score">0</span></p>
+          <p><span id="label-hi-score">Hi Score</span>: <span id="hi-score">0</span></p>
+          <p><span id="label-coins">Coins</span>: <span id="coins">0</span></p>
+          <p><span id="label-lives">Lives</span>: <span id="lives">3</span></p>
+          <p><span id="label-level">Level</span>: <span id="level">1</span></p>
+          <p><span id="label-boost">Boost</span>: <span id="boost">None</span></p>
+          <p><span id="label-boss">Boss</span>: <span id="boss-status">None</span></p>
+        </div>
+      </header>
+
+      <section class="canvas-wrap">
+        <canvas id="game" width="900" height="540" aria-label="Comet Collector game area"></canvas>
+      </section>
+
+      <section class="controls">
+        <p id="controls-help">
+          Move: Arrow keys or A / D. On mobile: drag your finger.
+        </p>
+        <div class="control-buttons">
+          <button id="settings-btn" type="button">Settings</button>
+          <button id="shop-btn" type="button">Shop</button>
+          <button id="pause-btn" type="button">Pause</button>
+          <button id="restart" type="button">Restart Game</button>
+        </div>
+      </section>
+    </main>
+
+    <div class="shop-panel hidden" id="shop-panel" role="dialog" aria-modal="true" aria-labelledby="shop-title">
+      <div class="shop-card">
+        <h2 id="shop-title">Space Shop</h2>
+        <p class="shop-coins">Coins: <span id="shop-coins">0</span></p>
+        <div id="shop-items" class="shop-items"></div>
+        <p id="shop-limited-footer" class="shop-limited-footer"></p>
+        <div class="settings-actions">
+          <button id="close-shop" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="hacks-panel hack-hidden" id="hacks-panel" aria-live="polite">
+      <h3 id="hacks-title">Hacks</h3>
+      <p class="hacks-tip" id="hacks-tip">Press Z to show or hide</p>
+      <div class="hacks-actions">
+        <button id="hack-btn" type="button">Hack Mode</button>
+        <button id="stop-time-btn" type="button">Stop Bad Time</button>
+        <button id="shooter-btn" type="button">Bad Comet Shooter</button>
+      </div>
+      <label for="points-input" id="label-points-input">Points Changer</label>
+      <div class="points-row">
+        <input id="points-input" type="number" value="0" min="0" max="999999" step="10" />
+        <button id="apply-points" type="button">Apply</button>
+      </div>
+
+      <label for="level-input" id="label-level-input">Level Setter</label>
+      <div class="points-row">
+        <input id="level-input" type="number" value="1" min="1" max="9999" step="1" />
+        <button id="apply-level" type="button">Apply</button>
+      </div>
+
+      <label for="lives-input" id="label-lives-input">Life Setter</label>
+      <div class="points-row">
+        <input id="lives-input" type="number" value="3" min="0" max="9999" step="1" />
+        <button id="apply-lives" type="button">Apply</button>
+      </div>
+
+      <label for="coins-input" id="label-coins-input">Coin Adder</label>
+      <div class="points-row">
+        <input id="coins-input" type="number" value="100" min="0" max="999999" step="10" />
+        <button id="apply-coins" type="button">Add</button>
+      </div>
+
+      <label for="hack-skin-select" id="label-hack-skin">Skin Setter</label>
+      <div class="points-row">
+        <select id="hack-skin-select"></select>
+        <button id="apply-hack-skin" type="button">Apply</button>
+      </div>
+
+      <label for="hack-background-select" id="label-hack-background">Background Setter</label>
+      <div class="points-row">
+        <select id="hack-background-select"></select>
+        <button id="apply-hack-background" type="button">Apply</button>
+      </div>
+
+      <label for="hack-comet-select" id="label-hack-comet">Comet Variant Setter</label>
+      <div class="points-row">
+        <select id="hack-comet-select"></select>
+        <button id="apply-hack-comet" type="button">Apply</button>
+      </div>
+    </aside>
+
+    <div class="settings-panel hidden" id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="settings-card">
+        <h2 id="settings-title">Game Settings</h2>
+
+        <label for="difficulty">Difficulty</label>
+        <select id="difficulty">
+          <option value="easy">Easy</option>
+          <option value="normal" selected>Normal</option>
+          <option value="hard">Hard</option>
+        </select>
+
+        <label class="check-row" for="sound-toggle">
+          <input id="sound-toggle" type="checkbox" checked />
+          <span>Sound Effects</span>
+        </label>
+
+        <label class="check-row" for="music-toggle">
+          <input id="music-toggle" type="checkbox" checked />
+          <span>Background Music</span>
+        </label>
+
+        <label for="theme-select">Theme</label>
+        <select id="theme-select">
+          <option value="bright">Bright</option>
+          <option value="dark">Dark</option>
+        </select>
+
+        <label for="brightness-range">Brightness</label>
+        <input id="brightness-range" type="range" min="65" max="130" step="1" value="100" />
+        <p class="setting-subtext"><span id="brightness-value">100%</span></p>
+
+        <label for="language-select">Language</label>
+        <select id="language-select">
+          <option value="en">English</option>
+          <option value="es">Espanol</option>
+        </select>
+
+        <label for="skin-select">Skin</label>
+        <select id="skin-select"></select>
+
+        <label for="background-select">Background</label>
+        <select id="background-select"></select>
+
+        <div class="settings-actions">
+          <button id="save-settings" type="button">Save</button>
+          <button id="close-settings" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+      <div class="card">
+        <h2 id="overlay-title">Ready to Play?</h2>
+        <p id="overlay-text">
+          Catch shiny comets, dodge spicy meteors, and beat your best score!
+        </p>
+        <button id="start" type="button">Start</button>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
