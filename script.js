@@ -1482,7 +1482,9 @@ function applyManualLevel() {
 }
 
 function applyManualLives() {
-  state.lives = Math.max(0, Math.min(9999, state.lives + 1));
+  const amount = Number.parseInt(livesInput.value, 10);
+  if (!Number.isFinite(amount) || amount <= 0) return;
+  state.lives = Math.max(0, Math.min(9999, state.lives + amount));
   livesInput.value = "1";
   updateHud();
 }
