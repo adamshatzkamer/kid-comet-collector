@@ -23,6 +23,7 @@ const hacksPanel = document.getElementById("hacks-panel");
 const hackBtn = document.getElementById("hack-btn");
 const stopTimeBtn = document.getElementById("stop-time-btn");
 const shooterBtn = document.getElementById("shooter-btn");
+const invincibleBtn = document.getElementById("invincible-btn");
 
 const settingsPanel = document.getElementById("settings-panel");
 const shopPanel = document.getElementById("shop-panel");
@@ -100,6 +101,7 @@ const I18N = {
     resume: "Resume",
     hacksTitle: "Hacks",
     hacksTip: "Press Z to show or hide",
+    invincibleMode: "Invincible Mode",
     pointsChanger: "Points Changer",
     levelSetter: "Level Setter",
     lifeSetter: "Life Adder",
@@ -198,6 +200,7 @@ const I18N = {
     resume: "Continuar",
     hacksTitle: "Trucos",
     hacksTip: "Presiona Z para mostrar u ocultar",
+    invincibleMode: "Modo Invencible",
     pointsChanger: "Cambiar Puntos",
     levelSetter: "Cambiar Nivel",
     lifeSetter: "Sumar Vidas",
@@ -538,6 +541,7 @@ const state = {
   stopBadUntil: 0,
   shooterUntil: 0,
   shooterLastShotAt: 0,
+  invincibleMode: false,
   keys: {
     left: false,
     right: false,
@@ -568,6 +572,7 @@ function resetGame() {
   state.bossShooterUntil = 0;
   state.bossLastShotAt = 0;
   state.shooterLastShotAt = 0;
+  state.invincibleMode = false;
   state.boss = null;
   state.nextBossLevel = Math.max(100, Math.ceil(state.level / 100) * 100);
   state.player.x = canvas.width / 2;
@@ -1269,6 +1274,14 @@ function stopBadCometsTime() {
   setTimeout(() => beep(460, 0.08, "triangle"), 90);
 }
 
+function activateInvincibleMode() {
+  if (!state.hackUnlocked) return;
+  state.invincibleMode = !state.invincibleMode;
+  const color = state.invincibleMode ? "#ffd447" : "#ff6b6b";
+  addBurst(state.player.x, state.player.y - 24, color, 28);
+  beep(state.invincibleMode ? 700 : 300, 0.1, "square");
+}
+
 function activateBadCometShooter() {
   if (!state.hackUnlocked) return;
   state.shooterUntil = performance.now() + 9000;
@@ -1908,6 +1921,12 @@ function activateBoost(boostType) {
 }
 
 function applyDamage() {
+  if (state.invincibleMode) {
+    addBurst(state.player.x, state.player.y - 10, "#ffd447", 15);
+    beep(600, 0.05, "sine");
+    return;
+  }
+
   if (state.activeBoost?.type === "shield") {
     state.activeBoost = null;
     addBurst(state.player.x, state.player.y - 10, "#56e5ff", 18);
@@ -2373,6 +2392,10 @@ stopTimeBtn.addEventListener("click", () => {
 
 shooterBtn.addEventListener("click", () => {
   activateBadCometShooter();
+});
+
+invincibleBtn.addEventListener("click", () => {
+  activateInvincibleMode();
 });
 
 applyPointsBtn.addEventListener("click", () => {
