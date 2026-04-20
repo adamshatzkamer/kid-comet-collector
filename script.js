@@ -703,14 +703,13 @@ function resetGame() {
   state.items = [];
   state.particles = [];
   state.targetX = null;
-  state.activeBoost = null;
   state.stopBadUntil = 0;
   state.shooterUntil = 0;
   state.bossShooterUntil = 0;
   state.bossLastShotAt = 0;
   state.shooterLastShotAt = 0;
   state.invincibleMode = false;
-  state.boss = null;
+  state.activeBoosts = [];
   state.nextBossLevel = Math.max(100, Math.ceil(state.level / 100) * 100);
   state.player.x = canvas.width / 2;
   state.player.speed = preset.playerSpeed + state.shop.speedLevel * 0.7;
@@ -757,12 +756,15 @@ function updateHud(force = true) {
   }
 
   let boostText = strings.none;
-  if (state.activeBoost) {
-    const msLeft = Math.max(0, state.activeBoost.expiresAt - now);
-    const seconds = (msLeft / 1000).toFixed(1);
-    const boostDetails = BOOST_DETAILS[state.activeBoost.type];
-    const boostLabel = strings[boostDetails.labelKey] || boostDetails.labelKey;
-    boostText = `${boostLabel} (${seconds}s)`;
+  if (state.activeBoosts.length > 0) {
+    const boostLabels = state.activeBoosts.map(boost => {
+      const msLeft = Math.max(0, boost.expiresAt - now);
+      const seconds = (msLeft / 1000).toFixed(1);
+      const boostDetails = BOOST_DETAILS[boost.type];
+      const boostLabel = strings[boostDetails.labelKey] || boostDetails.labelKey;
+      return `${boostLabel} (${seconds}s)`;
+    });
+    boostText = boostLabels.join(" + ");
   }
 
   if (hudSnapshot.boost !== boostText) {
@@ -1120,11 +1122,7 @@ function getShopItems() {
       buy: () => {
         const now = performance.now();
         const expiresAt = now + 45000;
-        if (state.activeBoost?.type === "double") {
-          state.activeBoost.expiresAt = Math.max(state.activeBoost.expiresAt, expiresAt);
-        } else {
-          state.activeBoost = { type: "double", expiresAt };
-        }
+        state.activeBoosts.push({ type: "double", expiresAt });
       },
     },
     {
@@ -1136,11 +1134,7 @@ function getShopItems() {
       buy: () => {
         const now = performance.now();
         const expiresAt = now + 30000;
-        if (state.activeBoost?.type === "slow") {
-          state.activeBoost.expiresAt = Math.max(state.activeBoost.expiresAt, expiresAt);
-        } else {
-          state.activeBoost = { type: "slow", expiresAt };
-        }
+        state.activeBoosts.push({ type: "slow", expiresAt });
       },
     },
     {
@@ -1926,9 +1920,9 @@ function update() {
 
   saveHighScoreIfNeeded();
 
-  if (state.activeBoost && now >= state.activeBoost.expiresAt) {
-    state.activeBoost = null;
-  }
+  // Clean up expired boosts
+  const now = performance.now();
+  state.activeBoosts = state.activeBoosts.filter(b => b.expiresAt > now);
 
   autoShootBadComet(now);
   updateBoss(now);
@@ -2044,20 +2038,20 @@ function update() {
 }
 
 function getPointValue() {
-  return state.activeBoost?.type === "double" ? 20 : 10;
+  return state.activeBoosts.some(b => b.type === "double") ? 20 : 10;
 }
 
 function getFallFactor() {
-  return state.activeBoost?.type === "slow" ? 0.64 : 1;
+  return state.activeBoosts.some(b => b.type === "slow") ? 0.64 : 1;
 }
 
 function activateBoost(boostType) {
   const details = BOOST_DETAILS[boostType];
   if (!details) return;
-  state.activeBoost = {
+  state.activeBoosts.push({
     type: boostType,
     expiresAt: performance.now() + details.durationMs,
-  };
+  });
 }
 
 function applyDamage() {
@@ -2067,8 +2061,9 @@ function applyDamage() {
     return;
   }
 
-  if (state.activeBoost?.type === "shield") {
-    state.activeBoost = null;
+  const shieldIndex = state.activeBoosts.findIndex(b => b.type === "shield");
+  if (shieldIndex !== -1) {
+    state.activeBoosts.splice(shieldIndex, 1);
     addBurst(state.player.x, state.player.y - 10, "#56e5ff", 18);
     beep(500, 0.08, "square");
     return;
