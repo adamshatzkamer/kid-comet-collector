@@ -33,6 +33,11 @@ const createProfileBtn = document.getElementById("create-profile-btn");
 const deleteProfileBtn = document.getElementById("delete-profile-btn");
 const closeProfilesBtn = document.getElementById("close-profiles");
 const currentProfileNameEl = document.getElementById("current-profile-name");
+const loginPanel = document.getElementById("login-panel");
+const loginUsernameInput = document.getElementById("login-username-input");
+const loginButton = document.getElementById("login-button");
+const guestLoginButton = document.getElementById("guest-login-button");
+const loginErrorEl = document.getElementById("login-error");
 
 const settingsPanel = document.getElementById("settings-panel");
 const shopPanel = document.getElementById("shop-panel");
@@ -89,7 +94,10 @@ const LEADERBOARD_KEY = "cometCollectorLeaderboard";
 const PROFILES_KEY = "cometCollectorProfiles";
 const CURRENT_PROFILE_KEY = "cometCollectorCurrentProfile";
 const LEADERBOARD_LIMIT = 20;
-const REMOTE_LEADERBOARD_URL = ""; // Set your leaderboard API endpoint here for online mode
+const REMOTE_API_BASE_URL = ""; // Set your backend service root URL here for online user management and leaderboard
+const REMOTE_LEADERBOARD_URL = REMOTE_API_BASE_URL ? `${REMOTE_API_BASE_URL}/leaderboard` : "";
+const REMOTE_USER_LOGIN_URL = REMOTE_API_BASE_URL ? `${REMOTE_API_BASE_URL}/users/login` : "";
+const REMOTE_USER_PROFILE_URL = REMOTE_API_BASE_URL ? `${REMOTE_API_BASE_URL}/users` : "";
 
 const I18N = {
   en: {
@@ -302,6 +310,47 @@ function formatI18n(text, values) {
   return text.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ""));
 }
 
+function openLoginPanel() {
+  loginErrorEl.textContent = "";
+  loginUsernameInput.value = ProfileManager.getCurrentProfile() || "";
+  loginPanel.classList.remove("hidden");
+  overlay.classList.add("hidden");
+  loginUsernameInput.focus();
+}
+
+function closeLoginPanel() {
+  loginPanel.classList.add("hidden");
+}
+
+async function handleUserLogin() {
+  const username = loginUsernameInput.value.trim();
+  if (!username) {
+    loginErrorEl.textContent = "Please enter a username.";
+    loginUsernameInput.focus();
+    return;
+  }
+
+  loginErrorEl.textContent = "";
+  try {
+    await loadProfile(username);
+    closeLoginPanel();
+    updateHud();
+    const strings = getStrings();
+    showOverlay(strings.overlayReadyTitle, strings.overlayReadyText, strings.start);
+  } catch (err) {
+    console.error(err);
+    loginErrorEl.textContent = "Unable to log in. Try a different name.";
+  }
+}
+
+async function handleGuestLogin() {
+  await loadProfile("Default");
+  closeLoginPanel();
+  updateHud();
+  const strings = getStrings();
+  showOverlay(strings.overlayReadyTitle, strings.overlayReadyText, strings.start);
+}
+
 // ============ PROFILE MANAGER (Abstracted for cloud migration) ============
 
 const ProfileManager = {
@@ -370,6 +419,67 @@ const ProfileManager = {
       },
       hackUnlocked: false,
     };
+  },
+};
+
+const UserManager = {
+  async login(username) {
+    const cleanName = String(username || "").trim().slice(0, 24);
+    if (!cleanName) throw new Error("Invalid username");
+
+    if (!REMOTE_API_BASE_URL) {
+      const profiles = await ProfileManager.listProfiles();
+      if (!profiles.includes(cleanName)) {
+        await ProfileManager.saveProfile(cleanName, ProfileManager.getDefaultProfileData());
+      }
+      ProfileManager.setCurrentProfile(cleanName);
+      return { username: cleanName, profile: await ProfileManager.getProfile(cleanName) };
+    }
+
+    const response = await fetch(REMOTE_USER_LOGIN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: cleanName }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Remote login failed");
+    }
+
+    const data = await response.json();
+    const profile = data.profile || ProfileManager.getDefaultProfileData();
+    await ProfileManager.saveProfile(data.username, profile);
+    ProfileManager.setCurrentProfile(data.username);
+    return { username: data.username, profile };
+  },
+
+  async saveProfile(name, data) {
+    await ProfileManager.saveProfile(name, data);
+    if (!REMOTE_API_BASE_URL) return;
+
+    try {
+      await fetch(`${REMOTE_USER_PROFILE_URL}/${encodeURIComponent(name)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile: data }),
+      });
+    } catch {
+      // Keep local data even if remote sync fails.
+    }
+  },
+
+  async fetchProfile(name) {
+    if (!REMOTE_API_BASE_URL) return ProfileManager.getProfile(name);
+
+    try {
+      const response = await fetch(`${REMOTE_USER_PROFILE_URL}/${encodeURIComponent(name)}`);
+      if (!response.ok) throw new Error("Remote fetch failed");
+      const data = await response.json();
+      await ProfileManager.saveProfile(name, data.profile || ProfileManager.getDefaultProfileData());
+      return data.profile;
+    } catch {
+      return ProfileManager.getProfile(name);
+    }
   },
 };
 
@@ -651,7 +761,14 @@ const state = {
 };
 
 async function loadProfile(profileName) {
-  const profileData = await ProfileManager.getProfile(profileName);
+  let profileData;
+  try {
+    const user = await UserManager.login(profileName);
+    profileData = user.profile;
+  } catch {
+    profileData = await ProfileManager.getProfile(profileName);
+  }
+
   if (!profileData) return false;
 
   state.currentProfile = profileName;
@@ -683,7 +800,7 @@ async function saveProfile() {
     shop: state.shop,
     hackUnlocked: state.hackUnlocked,
   };
-  await ProfileManager.saveProfile(state.currentProfile, profileData);
+  await UserManager.saveProfile(state.currentProfile, profileData);
 }
 
 async function updateProfileUI() {
@@ -1951,7 +2068,6 @@ function update() {
   saveHighScoreIfNeeded();
 
   // Clean up expired boosts
-  const now = performance.now();
   state.activeBoosts = state.activeBoosts.filter(b => b.expiresAt > now);
 
   autoShootBadComet(now);
@@ -2646,6 +2762,15 @@ createProfileBtn.addEventListener("click", async () => {
   updateHud();
 });
 
+loginButton.addEventListener("click", handleUserLogin);
+guestLoginButton.addEventListener("click", handleGuestLogin);
+loginUsernameInput.addEventListener("keydown", async (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    await handleUserLogin();
+  }
+});
+
 deleteProfileBtn.addEventListener("click", async () => {
   if (state.currentProfile === "Default") {
     alert("Cannot delete the Default profile");
@@ -2718,6 +2843,5 @@ handleResize();
   }
   updateHud();
   loop();
-  const initialStrings = getStrings();
-  showOverlay(initialStrings.overlayReadyTitle, initialStrings.overlayReadyText, initialStrings.start);
+  openLoginPanel();
 })();

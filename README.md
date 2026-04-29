@@ -42,13 +42,16 @@ The backend exposes:
 
 - `GET /leaderboard` — fetch the top 20 scores
 - `POST /leaderboard` — submit a score
+- `POST /users/login` — create or sign in with a username only
+- `GET /users/:username` — fetch user profile data
+- `PUT /users/:username` — update user profile data
 
 ### Deploy to Render
 
 1. Create a new Node web service on Render using this repository.
 2. Set the build command to `npm install`.
 3. Set the start command to `npm start`.
-4. After deployment, use the service URL plus `/leaderboard` as `REMOTE_LEADERBOARD_URL` in `script.js`.
+4. After deployment, set `REMOTE_API_BASE_URL` in `script.js` to the service URL.
 
 ### Important
 

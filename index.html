@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Comet Collector</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23ff7a00' d='M8 0l2.4 5.1L16 6l-4 3.9.9 5L8 12.8 3.1 14 4 9.9 0 6l5.6-.9z'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -193,6 +194,20 @@
         <div class="settings-actions">
           <button id="delete-profile-btn" type="button" style="background-color: #ff6b6b;">Delete</button>
           <button id="close-profiles" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="shop-panel hidden" id="login-panel" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <div class="shop-card">
+        <h2 id="login-title">Player Login</h2>
+        <p class="shop-coins">Enter any username to continue.</p>
+        <label for="login-username-input">Username</label>
+        <input id="login-username-input" type="text" maxlength="24" placeholder="Enter your name" />
+        <p class="shop-coins" id="login-error" style="color: #f87171; min-height: 1.2em;"></p>
+        <div class="settings-actions">
+          <button id="login-button" type="button">Login</button>
+          <button id="guest-login-button" type="button">Continue as Guest</button>
         </div>
       </div>
     </div>
